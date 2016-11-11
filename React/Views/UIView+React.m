@@ -279,9 +279,7 @@
 
   if (!CGRectIntersectsRect(self.frame, clippingRectForSuperview)) {
     // we are clipped
-    if (self.superview) {
-      [self removeFromSuperview];
-    }
+    clipView(self);
   } else {
     // we are not clipped
     if (!self.superview) {
@@ -314,7 +312,6 @@
     clipRect = CGRectIntersection(clipRect, self.bounds);
   }
   for (UIView *subview in self.sortedReactSubviews) {
-    // TODO inserting subviews based on react subviews is not safe if react hierarchy doesn't match view hierarchy
     if (CGRectIntersectsRect(subview.frame, clipRect)) {
       if (!subview.superview) {
         if (lastSubview) {
@@ -326,7 +323,18 @@
       lastSubview = subview;
       [subview rct_clipSubviewsWithAncestralClipRect:[self convertRect:clipRect toView:subview]];
     } else {
-      [subview removeFromSuperview];
+      clipView(subview);
+    }
+  }
+}
+
+static void clipView(UIView *view)
+{
+  // we are clipped
+  if (view.superview) {
+    // We don't clip if react hierarchy doesn't match uiview hierarchy, since we could get into inconsistent state.
+    if (view.reactSuperview == view.superview) {
+      [view removeFromSuperview];
     }
   }
 }
@@ -364,7 +372,6 @@
 - (void)rct_updateSubviewsWithNextClippingView:(UIView *)clippingView
 {
   for (UIView *subview in self.sortedReactSubviews) {
-    // TODO inserting subviews based on react subviews is not safe if react hierarchy doesn't match view hierarchy
     if (!clippingView) {
       [self addSubview:subview];
     }
