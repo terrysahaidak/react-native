@@ -662,23 +662,6 @@ describe('Native Animated', () => {
       expect(jest.runAllTimers).toThrow();
     });
 
-    it('fails for unsupported styles', () => {
-      const anim = new Animated.Value(0);
-
-      createAndMountComponent(Animated.View, {
-        style: {
-          left: anim,
-        },
-      });
-
-      const animation = Animated.timing(anim, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      });
-      expect(animation.start).toThrowError(/left/);
-    });
-
     it('works for any `static` props and styles', () => {
       // Passing "unsupported" props should work just fine as long as they are not animated
       const value = new Animated.Value(0);

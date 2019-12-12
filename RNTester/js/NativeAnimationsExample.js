@@ -400,6 +400,10 @@ exports.examples = [
                       outputRange: [0.25, 1],
                     }),
                   ),
+                  width: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, 100],
+                  }),
                 },
               ]}
             />
