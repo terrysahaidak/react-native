@@ -53,6 +53,12 @@ RCT_EXPORT_MODULE();
   [bridge.surfacePresenter addObserver:self];
 }
 
+RCT_EXPORT_METHOD(configureProps:(NSArray<NSString*>*)nativeProps uiProps:(NSArray<NSString*>*)uiProps)
+{
+  [_nodesManager configureProps:nativeProps uiProps:uiProps];
+}
+
+
 #pragma mark -- API
 
 RCT_EXPORT_METHOD(createAnimatedNode:(nonnull NSNumber *)tag

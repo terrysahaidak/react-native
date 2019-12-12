@@ -15,7 +15,7 @@
 #import "RCTStyleAnimatedNode.h"
 #import "RCTValueAnimatedNode.h"
 
-
+#import <React/RCTNativeAnimatedNodesManager.h>
 
 @implementation RCTPropsAnimatedNode
 {
@@ -63,13 +63,29 @@
 
 - (void)updateView
 {
+  NSMutableDictionary *uiProps = [NSMutableDictionary new];
+  NSMutableDictionary *nativeProps = [NSMutableDictionary new];
+
+  for (NSString *key in _propsDictionary.allKeys) {
+    if([self.manager.uiProps containsObject: key]) {
+      [uiProps setObject:_propsDictionary[key] forKey:key];
+    } else {
+        [nativeProps setObject:_propsDictionary[key] forKey:key];
+    }
+  }
+
   if (_managedByFabric) {
     [_bridge.surfacePresenter synchronouslyUpdateViewOnUIThread:_connectedViewTag
                                                           props:_propsDictionary];
   } else {
-    [_bridge.uiManager synchronouslyUpdateViewOnUIThread:_connectedViewTag
-                                                viewName:_connectedViewName
-                                                   props:_propsDictionary];
+    if (uiProps.count > 0) {
+      [_bridge.uiManager synchronouslyUpdateViewOnUIThread:_connectedViewTag
+                                                  viewName:_connectedViewName
+                                                     props:uiProps];
+    }
+    if (nativeProps.count > 0) {
+      [self.manager enqueueUpdateViewOnNativeThread:_connectedViewTag viewName:_connectedViewName nativeProps:nativeProps];
+    }
   }
 }
 

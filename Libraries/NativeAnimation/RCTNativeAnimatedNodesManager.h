@@ -13,7 +13,17 @@
 
 @interface RCTNativeAnimatedNodesManager : NSObject
 
+@property (nonatomic, copy, readonly) NSArray<NSString*>* uiProps;
+@property (nonatomic, copy, readonly) NSArray<NSString*>* nativeProps;
+
 - (nonnull instancetype)initWithBridge:(nonnull RCTBridge *)bridge;
+
+- (void)configureProps:(NSArray<NSString*>*)nativeProps
+               uiProps:(NSArray<NSString*>*)uiProps;
+
+- (void)enqueueUpdateViewOnNativeThread:(nonnull NSNumber *)reactTag
+                               viewName:(NSString *) viewName
+                            nativeProps:(NSMutableDictionary *)nativeProps;
 
 - (void)updateAnimations;
 

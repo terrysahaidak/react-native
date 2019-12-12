@@ -390,19 +390,23 @@ exports.examples = [
                       }),
                     },
                   ],
-                  opacity: Animated.multiply(
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 0],
-                    }),
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.25, 1],
-                    }),
-                  ),
+                  // opacity: Animated.multiply(
+                  //   anim.interpolate({
+                  //     inputRange: [0, 1],
+                  //     outputRange: [1, 0],
+                  //   }),
+                  //   anim.interpolate({
+                  //     inputRange: [0, 1],
+                  //     outputRange: [0.25, 1],
+                  //   }),
+                  // ),
                   width: anim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [10, 100],
+                  }),
+                  backgroundColor: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['red', 'green'],
                   }),
                 },
               ]}
