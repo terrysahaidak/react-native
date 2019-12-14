@@ -1,9 +1,10 @@
-/**
+/*
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
- * <p>This source code is licensed under the MIT license found in the LICENSE file in the root
- * directory of this source tree.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
+
 package com.facebook.react.animated;
 
 import android.util.SparseArray;
@@ -11,24 +12,32 @@ import androidx.annotation.Nullable;
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.GuardedRunnable;
 import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.UiThreadUtil;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.common.ReactConstants;
 import com.facebook.react.uimanager.IllegalViewOperationException;
+import com.facebook.react.uimanager.ReactShadowNode;
+import com.facebook.react.uimanager.UIImplementation;
 import com.facebook.react.uimanager.UIManagerModule;
+import com.facebook.react.uimanager.UIManagerNativeAnimatedHelper;
 import com.facebook.react.uimanager.events.Event;
 import com.facebook.react.uimanager.events.EventDispatcherListener;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 
 /**
  * This is the main class that coordinates how native animated JS implementation drives UI changes.
@@ -57,10 +66,30 @@ import java.util.Queue;
   // Used to avoid allocating a new array on every frame in `runUpdates` and `onEventDispatch`.
   private final List<AnimatedNode> mRunUpdateNodeList = new LinkedList<>();
 
-  public NativeAnimatedNodesManager(UIManagerModule uiManager) {
+  private final ReactContext mContext;
+  private final UIManagerModule mUIManager;
+  private final UIImplementation mUIImplementation;
+
+  public Set<String> uiProps = Collections.emptySet();
+  public Set<String> nativeProps = Collections.emptySet();
+
+  private final class NativeUpdateOperation {
+    public int mViewTag;
+    public WritableMap mNativeProps;
+    public NativeUpdateOperation(int viewTag, WritableMap nativeProps) {
+      mViewTag = viewTag;
+      mNativeProps = nativeProps;
+    }
+  }
+  private Queue<NativeUpdateOperation> mOperationsInBatch = new LinkedList<>();
+
+  public NativeAnimatedNodesManager(UIManagerModule uiManager, ReactApplicationContext context) {
     mUIManagerModule = uiManager;
     uiManager.getEventDispatcher().addListener(this);
     mCustomEventNamesResolver = uiManager.getDirectEventNamesResolver();
+    mContext = context;
+    mUIManager = context.getNativeModule(UIManagerModule.class);
+    mUIImplementation = mUIManager.getUIImplementation();
   }
 
   /*package*/ @Nullable
@@ -171,6 +200,11 @@ import java.util.Queue;
           "Animated node with tag " + tag + " does not exists or is not a 'value' node");
     }
     ((ValueAnimatedNode) node).extractOffset();
+  }
+
+  public void configureProps(Set<String> nativePropsSet, Set<String> uiPropsSet) {
+    nativeProps = nativePropsSet;
+    uiProps = uiPropsSet;
   }
 
   public void startAnimatingNode(
@@ -317,7 +351,7 @@ import java.util.Queue;
     propsAnimatedNode.disconnectFromView(viewTag);
   }
 
-  public void restoreDefaultValues(int animatedNodeTag, int viewTag) {
+  public void restoreDefaultValues(int animatedNodeTag) {
     AnimatedNode node = mAnimatedNodes.get(animatedNodeTag);
     // Restoring default values needs to happen before UIManager operations so it is
     // possible the node hasn't been created yet if it is being connected and
@@ -383,6 +417,10 @@ import java.util.Queue;
         }
       }
     }
+  }
+
+  public void enqueueUpdateViewOnNativeThread(int viewTag, WritableMap nativeProps) {
+    mOperationsInBatch.add(new NativeUpdateOperation(viewTag, nativeProps));
   }
 
   @Override
@@ -470,6 +508,28 @@ import java.util.Queue;
           mActiveAnimations.removeAt(i);
         }
       }
+    }
+
+    if (!mOperationsInBatch.isEmpty()) {
+      final Queue<NativeUpdateOperation> copiedOperationsQueue = mOperationsInBatch;
+      mOperationsInBatch = new LinkedList<>();
+      mContext.runOnNativeModulesQueueThread(
+        new GuardedRunnable(mContext) {
+          @Override
+          public void runGuarded() {
+            boolean shouldDispatchUpdates = UIManagerNativeAnimatedHelper.isOperationQueueEmpty(mUIImplementation);
+            while (!copiedOperationsQueue.isEmpty()) {
+              NativeUpdateOperation op = copiedOperationsQueue.remove();
+              ReactShadowNode shadowNode = mUIImplementation.resolveShadowNode(op.mViewTag);
+              if (shadowNode != null) {
+                mUIManager.updateView(op.mViewTag, shadowNode.getViewClass(), op.mNativeProps);
+              }
+            }
+            if (shouldDispatchUpdates) {
+              mUIImplementation.dispatchViewUpdates(-1); // no associated batchId
+            }
+          }
+        });
     }
   }
 
