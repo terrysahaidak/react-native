@@ -240,6 +240,10 @@ class EventExample extends React.Component<{}, $FlowFixMeState> {
                   }),
                 },
               ],
+              borderRadius: this.state.anim.interpolate({
+                inputRange: [0, 200],
+                outputRange: [0, 25],
+              }),
             },
           ]}
         />
@@ -410,6 +414,10 @@ exports.examples = [
                       outputRange: [0.25, 1],
                     }),
                   ),
+                  width: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 100],
+                  }),
                 },
               ]}
             />
@@ -452,6 +460,10 @@ exports.examples = [
                       outputRange: [0.25, 1],
                     }),
                   ),
+                  width: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 100],
+                  }),
                 },
               ]}
             />

@@ -43,6 +43,20 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
   return eventName;
 }
 
+#import <React/RCTUIManagerUtils.h>
+
+typedef void (^RCTOnAnimationCallback)(RCTUIManager *uiManager);
+
+@interface RCTUIManager ()
+
+- (void)updateView:(nonnull NSNumber *)reactTag
+          viewName:(NSString *)viewName
+             props:(NSDictionary *)props;
+
+- (void)setNeedsLayout;
+
+@end
+
 @implementation RCTNativeAnimatedNodesManager
 {
   __weak RCTBridge *_bridge;
@@ -52,6 +66,19 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
   NSMutableDictionary<NSString *, NSMutableArray<RCTEventAnimation *> *> *_eventDrivers;
   NSMutableSet<id<RCTAnimationDriver>> *_activeAnimations;
   CADisplayLink *_displayLink;
+  NSArray<NSString*>* _nativeProps;
+  NSArray<NSString*>* _uiProps;
+  NSMutableArray<RCTOnAnimationCallback> *_operationsInBatch;
+}
+
+- (NSArray<NSString*>*) uiProps
+{
+  return _uiProps;
+}
+
+- (NSArray<NSString*>*) nativeProps
+{
+  return _nativeProps;
 }
 
 - (instancetype)initWithBridge:(nonnull RCTBridge *)bridge
@@ -61,6 +88,9 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
     _animationNodes = [NSMutableDictionary new];
     _eventDrivers = [NSMutableDictionary new];
     _activeAnimations = [NSMutableSet new];
+    _nativeProps = [[NSArray alloc] init];
+    _uiProps = [[NSArray alloc] init];
+    _operationsInBatch = [NSMutableArray new];
   }
   return self;
 }
@@ -242,6 +272,13 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
   [valueNode extractOffset];
 }
 
+- (void)configureProps:(NSArray<NSString*>*)nativeProps
+               uiProps:(NSArray<NSString*>*)uiProps
+{
+  _nativeProps = [NSArray arrayWithArray:nativeProps];
+  _uiProps = [NSArray arrayWithArray:uiProps];
+}
+
 #pragma mark -- Drivers
 
 - (void)startAnimatingNode:(nonnull NSNumber *)animationId
@@ -406,6 +443,15 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
   }
 }
 
+- (void)enqueueUpdateViewOnNativeThread:(nonnull NSNumber *)reactTag
+                               viewName:(NSString *) viewName
+                            nativeProps:(NSMutableDictionary *)nativeProps {
+  RCTBridge* bridge = _bridge;
+  [_operationsInBatch addObject:^(RCTUIManager *uiManager) {
+    [bridge.uiManager updateView:reactTag viewName:viewName props:nativeProps];
+  }];
+}
+
 
 #pragma mark -- Animation Loop
 
@@ -461,6 +507,17 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
       [node updateNodeIfNecessary];
     }
   }];
+
+  if (_operationsInBatch.count != 0) {
+    NSMutableArray<RCTOnAnimationCallback> *copiedOperationsQueue = _operationsInBatch;
+    _operationsInBatch = [NSMutableArray new];
+    RCTExecuteOnUIManagerQueue(^{
+      for (int i = 0; i < copiedOperationsQueue.count; i++) {
+        copiedOperationsQueue[i](self->_bridge.uiManager);
+      }
+      [self->_bridge.uiManager setNeedsLayout];
+    });
+  }
 }
 
 @end

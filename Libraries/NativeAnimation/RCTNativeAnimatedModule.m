@@ -55,6 +55,12 @@ RCT_EXPORT_MODULE();
 
 #pragma mark -- API
 
+RCT_EXPORT_METHOD(configureProps:(NSArray<NSString*>*)nativeProps uiProps:(NSArray<NSString*>*)uiProps)
+{
+  [_nodesManager configureProps:nativeProps uiProps:uiProps];
+}
+
+
 RCT_EXPORT_METHOD(createAnimatedNode:(nonnull NSNumber *)tag
                   config:(NSDictionary<NSString *, id> *)config)
 {
