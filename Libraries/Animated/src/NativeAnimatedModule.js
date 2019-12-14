@@ -32,6 +32,7 @@ export type AnimatingNodeConfig = {|
 |};
 
 export interface Spec extends TurboModule {
+  +configureProps: (nativeProps: Array<string>, uiProps: Array<string>) => void;
   +createAnimatedNode: (tag: ?number, config: AnimatedNodeConfig) => void;
   +startListeningToAnimatedNodeValue: (tag: ?number) => void;
   +stopListeningToAnimatedNodeValue: (tag: ?number) => void;
