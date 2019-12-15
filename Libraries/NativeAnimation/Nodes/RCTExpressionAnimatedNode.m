@@ -56,11 +56,11 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
     return [self evalBlockWithMultiOperator:node reducer:^CGFloat(CGFloat prev, CGFloat cur) {
       return prev - cur;
     }];
-  } else if([type isEqualToString:@"mul"]) {
+  } else if([type isEqualToString:@"multiply"]) {
     return [self evalBlockWithMultiOperator:node reducer:^CGFloat(CGFloat prev, CGFloat cur) {
       return prev * cur;
     }];
-  } else if([type isEqualToString:@"div"]) {
+  } else if([type isEqualToString:@"divide"]) {
     return [self evalBlockWithMultiOperator:node reducer:^CGFloat(CGFloat prev, CGFloat cur) {
       return prev / cur;
     }];
@@ -68,7 +68,7 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
     return [self evalBlockWithMultiOperator:node reducer:^CGFloat(CGFloat prev, CGFloat cur) {
       return pow(prev, cur);
     }];
-  } else if([type isEqualToString:@"modulo"]) {
+  } else if([type isEqualToString:@"mod"]) {
     return [self evalBlockWithMultiOperator:node reducer:^CGFloat(CGFloat prev, CGFloat cur) {
       return fmodf(fmodf(prev, cur) + cur, cur);
     }];

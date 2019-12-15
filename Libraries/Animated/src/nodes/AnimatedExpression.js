@@ -52,6 +52,9 @@ function createEvalFunc(node: AnimatedNode | number | Object): () => number {
   } else if (node.__getValue) {
     return () => node.__getValue();
   }
+  if (!expressionMap[node.type]) {
+    throw new Error('Error: Node type ' + node.type + ' not found.');
+  }
   return expressionMap[node.type].createEvalFunc(node);
 }
 
@@ -152,15 +155,22 @@ const convertNumber = (node: Object) => ({type: node.type, value: node.value});
 /* Factories */
 const valueFactory = (v: AnimatedNode | number) => {
   if (v instanceof Object) {
+    // Expression object
+    if (v.hasOwnProperty('type')) {
+      return v;
+    }
+    // Animated value / node
     return {
       type: 'value',
       getTag: v.__getNativeTag.bind(v),
       getValue: v.__getValue.bind(v),
     };
   } else {
+    // Number
     return {type: 'number', value: v};
   }
 };
+
 const multipOpFactory = (type: string) => (
   a: AnimatedNode | number,
   b: AnimatedNode | number,
@@ -217,10 +227,10 @@ const expressionMap = {
   /* Multi ops */
   add: createMultiOp('add', (p, c) => p + c),
   sub: createMultiOp('sub', (p, c) => p - c),
-  mul: createMultiOp('mul', (p, c) => p * c),
-  div: createMultiOp('div', (p, c) => p / c),
+  multiply: createMultiOp('multiply', (p, c) => p * c),
+  divide: createMultiOp('divide', (p, c) => p / c),
   pow: createMultiOp('pow', (p, c) => Math.pow(p, c)),
-  modulo: createMultiOp('modulo', (p, c) => ((p % c) + c) % c),
+  modulo: createMultiOp('mod', (p, c) => ((p % c) + c) % c),
   /* Single ops */
   sqrt: createSingleOp('sqrt', v => Math.sqrt(v)),
   log: createSingleOp('log', v => Math.log(v)),
