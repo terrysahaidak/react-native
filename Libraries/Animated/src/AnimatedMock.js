@@ -135,6 +135,8 @@ module.exports = {
   decay,
   timing,
   spring,
+  expression: AnimatedImplementation.expression,
+  E: {},
   add: AnimatedImplementation.add,
   subtract: AnimatedImplementation.subtract,
   divide: AnimatedImplementation.divide,
