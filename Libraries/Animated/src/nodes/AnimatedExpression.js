@@ -31,11 +31,11 @@ class AnimatedExpression extends AnimatedWithChildren {
     // Collect all child nodes in expression and add self as child to
     // receive updates
     collectArguments(this._graph, this._args);
-    this._args.forEach(a => a.node.__attach(this));
+    this._args.forEach(a => a.node.__addChild(this));
   }
 
   __detach() {
-    this._args.forEach(a => a.node.__detach(this));
+    this._args.forEach(a => a.node.__removeChild(this));
     super.__detach();
   }
 
