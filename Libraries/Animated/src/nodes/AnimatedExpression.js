@@ -18,11 +18,25 @@ import type {InterpolationConfigType} from './AnimatedInterpolation';
 
 class AnimatedExpression extends AnimatedWithChildren {
   _graph: Object;
+  _args: [];
   _evalFunc: () => number;
 
   constructor(graph: Object) {
     super();
     this._graph = graph;
+    this._args = [];
+  }
+
+  __attach() {
+    // Collect all child nodes in expression and add self as child to
+    // receive updates
+    collectArguments(this._graph, this._args);
+    this._args.forEach(a => a.node.__attach(this));
+  }
+
+  __detach() {
+    this._args.forEach(a => a.node.__detach(this));
+    super.__detach();
   }
 
   __getValue(): number {
@@ -41,6 +55,23 @@ class AnimatedExpression extends AnimatedWithChildren {
 
   interpolate(config: InterpolationConfigType): AnimatedInterpolation {
     return new AnimatedInterpolation(this, config);
+  }
+}
+
+/* Arguments */
+function collectArguments(node: ?Object, args: AnimatedNode[]) {
+  if (node) {
+    if (node.type === 'value') {
+      args.push(node);
+    }
+    collectArguments(node.a, args);
+    collectArguments(node.b, args);
+    collectArguments(node.left, args);
+    collectArguments(node.right, args);
+    collectArguments(node.expr, args);
+    collectArguments(node.ifNode, args);
+    collectArguments(node.elseNode, args);
+    node.others && node.others.forEach(n => collectArguments(n, args));
   }
 }
 
@@ -162,6 +193,7 @@ const valueFactory = (v: AnimatedNode | number) => {
     // Animated value / node
     return {
       type: 'value',
+      node: v,
       getTag: v.__getNativeTag.bind(v),
       getValue: v.__getValue.bind(v),
     };

@@ -40,9 +40,6 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
   }
   
   self.value = _evalBlock();
-  
-  // Force update each frame
-  [self setNeedsUpdate];
 }
 
 - (evalBlock) evalBlockWithNode:(NSDictionary*)node {
