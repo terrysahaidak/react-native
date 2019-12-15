@@ -402,7 +402,11 @@ exports.examples = [
                     },
                   ],
                   backgroundColor: Animated.expression(
-                    Animated.E.cond(Animated.E.greaterThan(anim, 0.5), 0, 1),
+                    Animated.E.cond(
+                      Animated.E.greaterThan(Animated.E.multiply(anim, 10), 5),
+                      0,
+                      1,
+                    ),
                   ).interpolate({
                     inputRange: [0, 1],
                     outputRange: ['#FF0000', '#00FF00'],
