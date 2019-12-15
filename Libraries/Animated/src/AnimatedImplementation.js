@@ -23,6 +23,7 @@ const AnimatedProps = require('./nodes/AnimatedProps');
 const AnimatedSubtraction = require('./nodes/AnimatedSubtraction');
 const AnimatedTracking = require('./nodes/AnimatedTracking');
 const AnimatedValue = require('./nodes/AnimatedValue');
+const AnimatedExpression = require('./nodes/AnimatedExpression');
 const AnimatedValueXY = require('./nodes/AnimatedValueXY');
 const DecayAnimation = require('./animations/DecayAnimation');
 const SpringAnimation = require('./animations/SpringAnimation');
@@ -48,6 +49,12 @@ export type CompositeAnimation = {
   _isUsingNativeDriver: () => boolean,
   ...
 };
+
+const expression = function(graph: Object): AnimatedExpression {
+  return new AnimatedExpression(graph);
+};
+
+const E = AnimatedExpression.E;
 
 const add = function(
   a: AnimatedNode | number,
@@ -590,6 +597,14 @@ module.exports = {
    * See http://facebook.github.io/react-native/docs/animated.html#spring
    */
   spring,
+
+  /**
+   * Creates a new Animated expression composed from a node expression
+   *
+   * See http://facebook.github.io/react-native/docs/animated.html#expression
+   */
+  expression,
+  E,
 
   /**
    * Creates a new Animated value composed from two Animated values added

@@ -9,10 +9,13 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTUIManager.h>
 
+#import <React/RCTAnimatedNode.h>
+
 @protocol RCTValueAnimatedNodeObserver;
 
 @interface RCTNativeAnimatedNodesManager : NSObject
 
+@property (nonatomic, copy, readonly) NSMutableDictionary<NSNumber *, RCTAnimatedNode *> * animationNodes;
 @property (nonatomic, copy, readonly) NSArray<NSString*>* shadowViewProps;
 
 - (nonnull instancetype)initWithBridge:(nonnull RCTBridge *)bridge;

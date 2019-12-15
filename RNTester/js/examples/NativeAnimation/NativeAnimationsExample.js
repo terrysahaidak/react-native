@@ -401,293 +401,11 @@ exports.examples = [
                       }),
                     },
                   ],
-                  opacity: Animated.multiply(
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 0],
-                    }),
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.25, 1],
-                    }),
-                  ),
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Multistage With Multiply',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 200],
-                      }),
-                    },
-                    {
-                      translateY: anim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [0, 50, 0],
-                      }),
-                    },
-                  ],
-                  opacity: Animated.multiply(
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 0],
-                    }),
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.25, 1],
-                    }),
-                  ),
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Multistage With Subtract',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 200],
-                      }),
-                    },
-                    {
-                      translateY: anim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [0, 50, 0],
-                      }),
-                    },
-                  ],
-                  opacity: Animated.subtract(
-                    anim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1],
-                    }),
-                    anim.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: [0, 0.5, 0],
-                    }),
-                  ),
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Scale interpolation with clamping',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      scale: anim.interpolate({
-                        inputRange: [0, 0.5],
-                        outputRange: [1, 1.4],
-                        extrapolateRight: 'clamp',
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Opacity with delay',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000, delay: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  opacity: anim,
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Rotate interpolation',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      rotate: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0deg', '90deg'],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'translateX => Animated.spring (bounciness/speed)',
-    render: function(): React.Node {
-      return (
-        <Tester type="spring" config={{bounciness: 0}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 100],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'translateX => Animated.spring (stiffness/damping/mass)',
-    render: function(): React.Node {
-      return (
-        <Tester type="spring" config={{stiffness: 1000, damping: 500, mass: 3}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 100],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'translateX => Animated.decay',
-    render: function(): React.Node {
-      return (
-        <Tester
-          type="decay"
-          config={{velocity: 0.5}}
-          reverseConfig={{velocity: -0.5}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim,
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Interpolate colors and size',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 200],
-                      }),
-                    },
-                    {
-                      translateY: anim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [0, 50, 0],
-                      }),
-                    },
-                  ],
-                  width: anim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [50, 100, 50],
-                  }),
-                  borderRadius: anim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: [0, 100, 0],
-                  }),
-                  backgroundColor: anim.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange: ['rgba(255, 0, 0, 0.25)', '#00FF00', 'blue'],
+                  backgroundColor: Animated.expression(
+                    Animated.E.cond(Animated.E.greaterThan(anim, 0.5), 0, 1),
+                  ).interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#FF0000', '#00FF00'],
                   }),
                 },
               ]}
@@ -697,40 +415,318 @@ exports.examples = [
       );
     },
   },
-  {
-    title: 'Drive custom property (tap to animate)',
-    render: function(): React.Node {
-      return (
-        <Tester type="timing" config={{duration: 1000}}>
-          {anim => <AnimatedSlider style={{}} value={anim} />}
-        </Tester>
-      );
-    },
-  },
-  {
-    title: 'Animated value listener',
-    render: function(): React.Node {
-      return <ValueListenerExample />;
-    },
-  },
-  {
-    title: 'Animated loop',
-    render: function(): React.Node {
-      return <LoopExample />;
-    },
-  },
-  {
-    title: 'Animated events',
-    render: function(): React.Node {
-      return <EventExample />;
-    },
-  },
-  {
-    title: 'Animated Tracking - tap me many times',
-    render: function(): React.Node {
-      return <TrackingExample />;
-    },
-  },
+  // {
+  //   title: 'Multistage With Multiply',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: [0, 200],
+  //                     }),
+  //                   },
+  //                   {
+  //                     translateY: anim.interpolate({
+  //                       inputRange: [0, 0.5, 1],
+  //                       outputRange: [0, 50, 0],
+  //                     }),
+  //                   },
+  //                 ],
+  //                 opacity: Animated.multiply(
+  //                   anim.interpolate({
+  //                     inputRange: [0, 1],
+  //                     outputRange: [1, 0],
+  //                   }),
+  //                   anim.interpolate({
+  //                     inputRange: [0, 1],
+  //                     outputRange: [0.25, 1],
+  //                   }),
+  //                 ),
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Multistage With Subtract',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: [0, 200],
+  //                     }),
+  //                   },
+  //                   {
+  //                     translateY: anim.interpolate({
+  //                       inputRange: [0, 0.5, 1],
+  //                       outputRange: [0, 50, 0],
+  //                     }),
+  //                   },
+  //                 ],
+  //                 opacity: Animated.subtract(
+  //                   anim.interpolate({
+  //                     inputRange: [0, 1],
+  //                     outputRange: [1, 1],
+  //                   }),
+  //                   anim.interpolate({
+  //                     inputRange: [0, 0.5, 1],
+  //                     outputRange: [0, 0.5, 0],
+  //                   }),
+  //                 ),
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Scale interpolation with clamping',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     scale: anim.interpolate({
+  //                       inputRange: [0, 0.5],
+  //                       outputRange: [1, 1.4],
+  //                       extrapolateRight: 'clamp',
+  //                     }),
+  //                   },
+  //                 ],
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Opacity with delay',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000, delay: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 opacity: anim,
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Rotate interpolation',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     rotate: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: ['0deg', '90deg'],
+  //                     }),
+  //                   },
+  //                 ],
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'translateX => Animated.spring (bounciness/speed)',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="spring" config={{bounciness: 0}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: [0, 100],
+  //                     }),
+  //                   },
+  //                 ],
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'translateX => Animated.spring (stiffness/damping/mass)',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="spring" config={{stiffness: 1000, damping: 500, mass: 3}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: [0, 100],
+  //                     }),
+  //                   },
+  //                 ],
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'translateX => Animated.decay',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester
+  //         type="decay"
+  //         config={{velocity: 0.5}}
+  //         reverseConfig={{velocity: -0.5}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim,
+  //                   },
+  //                 ],
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Interpolate colors and size',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => (
+  //           <Animated.View
+  //             style={[
+  //               styles.block,
+  //               {
+  //                 transform: [
+  //                   {
+  //                     translateX: anim.interpolate({
+  //                       inputRange: [0, 1],
+  //                       outputRange: [0, 200],
+  //                     }),
+  //                   },
+  //                   {
+  //                     translateY: anim.interpolate({
+  //                       inputRange: [0, 0.5, 1],
+  //                       outputRange: [0, 50, 0],
+  //                     }),
+  //                   },
+  //                 ],
+  //                 width: anim.interpolate({
+  //                   inputRange: [0, 0.5, 1],
+  //                   outputRange: [50, 100, 50],
+  //                 }),
+  //                 borderRadius: anim.interpolate({
+  //                   inputRange: [0, 0.5, 1],
+  //                   outputRange: [0, 100, 0],
+  //                 }),
+  //                 backgroundColor: anim.interpolate({
+  //                   inputRange: [0, 0.5, 1],
+  //                   outputRange: ['rgba(255, 0, 0, 0.25)', '#00FF00', 'blue'],
+  //                 }),
+  //               },
+  //             ]}
+  //           />
+  //         )}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Drive custom property (tap to animate)',
+  //   render: function(): React.Node {
+  //     return (
+  //       <Tester type="timing" config={{duration: 1000}}>
+  //         {anim => <AnimatedSlider style={{}} value={anim} />}
+  //       </Tester>
+  //     );
+  //   },
+  // },
+  // {
+  //   title: 'Animated value listener',
+  //   render: function(): React.Node {
+  //     return <ValueListenerExample />;
+  //   },
+  // },
+  // {
+  //   title: 'Animated loop',
+  //   render: function(): React.Node {
+  //     return <LoopExample />;
+  //   },
+  // },
+  // {
+  //   title: 'Animated events',
+  //   render: function(): React.Node {
+  //     return <EventExample />;
+  //   },
+  // },
+  // {
+  //   title: 'Animated Tracking - tap me many times',
+  //   render: function(): React.Node {
+  //     return <TrackingExample />;
+  //   },
+  // },
   {
     title: 'Internal Settings',
     render: function(): React.Node {

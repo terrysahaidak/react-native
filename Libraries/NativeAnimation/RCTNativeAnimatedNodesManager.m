@@ -11,7 +11,6 @@
 #import <React/RCTUIManagerUtils.h>
 
 #import <React/RCTAdditionAnimatedNode.h>
-#import <React/RCTAnimatedNode.h>
 #import <React/RCTAnimationDriver.h>
 #import <React/RCTDiffClampAnimatedNode.h>
 #import <React/RCTDivisionAnimatedNode.h>
@@ -28,6 +27,7 @@
 #import <React/RCTTransformAnimatedNode.h>
 #import <React/RCTValueAnimatedNode.h>
 #import <React/RCTTrackingAnimatedNode.h>
+#import <React/RCTExpressionAnimatedNode.h>
 
 typedef void (^RCTOnAnimationCallback)(RCTUIManager *uiManager);
 
@@ -129,7 +129,9 @@ static NSString *RCTNormalizeAnimatedEventName(NSString *eventName)
             @"modulus" : [RCTModuloAnimatedNode class],
             @"subtraction" : [RCTSubtractionAnimatedNode class],
             @"transform" : [RCTTransformAnimatedNode class],
-            @"tracking" : [RCTTrackingAnimatedNode class]};
+            @"tracking" : [RCTTrackingAnimatedNode class],
+            @"expression" : [RCTExpressionAnimatedNode class]
+    };
   });
 
   NSString *nodeType = [RCTConvert NSString:config[@"type"]];
