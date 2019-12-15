@@ -127,6 +127,8 @@ import java.util.Set;
       node = new TransformAnimatedNode(config, this);
     } else if ("tracking".equals(type)) {
       node = new TrackingAnimatedNode(config, this);
+    } else if ("expression".equals(type)) {
+      node = new ExpressionAnimatedNode(config, this);
     } else {
       throw new JSApplicationIllegalArgumentException("Unsupported node type: " + type);
     }
