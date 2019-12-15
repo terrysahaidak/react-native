@@ -12,15 +12,16 @@
 
 const AnimatedInterpolation = require('./AnimatedInterpolation');
 const AnimatedNode = require('./AnimatedNode');
-const AnimatedValue = require('./AnimatedValue');
 const AnimatedWithChildren = require('./AnimatedWithChildren');
 
 import type {InterpolationConfigType} from './AnimatedInterpolation';
 
+import {factories, createEvaluator, converters} from './expressions';
+
 class AnimatedExpression extends AnimatedWithChildren {
   _graph: Object;
   _args: [];
-  _evalFunc: () => number;
+  _evaluator: () => number;
 
   constructor(graph: Object) {
     super();
@@ -39,16 +40,16 @@ class AnimatedExpression extends AnimatedWithChildren {
   }
 
   __getValue(): number {
-    if (!this._evalFunc) {
-      this._evalFunc = createEvalFunc(this._graph);
+    if (!this._evaluator) {
+      this._evaluator = createEvaluator(this._graph);
     }
-    return this._evalFunc();
+    return this._evaluator();
   }
 
   __getNativeConfig(): any {
     return {
       type: 'expression',
-      graph: expressionMap[this._graph.type].convertFunc(this._graph),
+      graph: converters[this._graph.type](this._graph),
     };
   }
 
@@ -77,306 +78,9 @@ function collectArguments(node: ?Object, args: AnimatedNode[]) {
   }
 }
 
-/* Evaluation tree */
-
-function createEvalFunc(node: AnimatedNode | number | Object): () => number {
-  if (typeof node === 'number') {
-    return () => node;
-  } else if (node.hasOwnProperty('__attach')) {
-    return () => node.__getValue();
-  }
-  if (!expressionMap[node.type]) {
-    throw new Error('Error: Node type ' + node.type + ' not found.');
-  }
-  return expressionMap[node.type].createEvalFunc(node);
-}
-
-function createEvalBlock(node: Object) {
-  const evalFuncs = node.nodes.map(createEvalFunc);
-  return () => {
-    let retVal = 0;
-    for (let i = 0; i < evalFuncs.length; i++) {
-      retVal = evalFuncs[i]();
-    }
-    return retVal;
-  };
-}
-
-function createEvalSetValue(node: Object) {
-  const source = createEvalFunc(node.source);
-  return () => {
-    const retVal = source();
-    node.target.setValue(retVal);
-    return retVal;
-  };
-}
-
-function createEvalCondition(node: Object) {
-  const expr = createEvalFunc(node.expr);
-  const ifEval = createEvalFunc(node.ifNode);
-  const falseEval = node.elseNode ? createEvalFunc(node.elseNode) : () => 0;
-
-  return () => {
-    const cond = expr();
-    if (cond) {
-      return ifEval();
-    } else {
-      return falseEval();
-    }
-  };
-}
-
-function createEvalMultiOpFunc(
-  node: Object,
-  reducer: (prev: number, cur: number) => number,
-) {
-  const a = createEvalFunc(node.a);
-  const b = createEvalFunc(node.b);
-  const others = (node.others || []).map(createEvalFunc);
-  return () => {
-    let acc = reducer(a(), b());
-    for (let i = 0; i < others.length; i++) {
-      acc = reducer(acc, others[i]());
-    }
-    return acc;
-  };
-}
-
-function createEvalSingleOpFunc(node: Object, reducer: (v: number) => number) {
-  const v = createEvalFunc(node.v);
-  return () => {
-    return reducer(v());
-  };
-}
-
-function createEvalOpFunc(
-  node: Object,
-  reducer: (left: number, right: number) => number,
-) {
-  const left = createEvalFunc(node.left);
-  const right = createEvalFunc(node.right);
-  return () => {
-    return reducer(left(), right());
-  };
-}
-
-/*
-  Conversion to native:
-  this is basically a reduction of the current graph where animated
-  nodes are changed to animated node ids.
-*/
-
-const convert = (v: number | Object) => {
-  if (typeof v === 'number') {
-    return {type: 'number', value: v};
-  }
-  return expressionMap[v.type].convertFunc(v);
+// Add expression factories to the .E namespace in Animated
+AnimatedExpression.E = {
+  ...factories,
 };
-
-const convertMultiOp = (node: Object) => {
-  return {
-    type: node.type,
-    a: convert(node.a),
-    b: convert(node.b),
-    others: (node.others || []).map(convert),
-  };
-};
-
-const convertSingleOp = (node: Object) => ({
-  type: node.type,
-  v: convert(node.v),
-});
-
-const convertOp = (node: Object) => {
-  return {
-    type: node.type,
-    left: convert(node.left),
-    right: convert(node.right),
-  };
-};
-
-const convertValue = (node: Object) => {
-  return {
-    type: node.type,
-    tag: node.getTag(),
-  };
-};
-
-const convertNumber = (node: Object) => ({type: node.type, value: node.value});
-
-/* Factories */
-const argFactory = (v: AnimatedNode | number) => {
-  if (v instanceof Object) {
-    // Expression object
-    if (v.hasOwnProperty('type')) {
-      return v;
-    }
-    // Animated value / node
-    return {
-      type: 'value',
-      node: v,
-      getTag: v.__getNativeTag.bind(v),
-      getValue: v.__getValue.bind(v),
-      setValue: (value: number) => (v._value = value),
-    };
-  } else {
-    // Number
-    return {type: 'number', value: v};
-  }
-};
-
-const multipOpFactory = (type: string) => (
-  a: AnimatedNode | number,
-  b: AnimatedNode | number,
-  ...others: Array<AnimatedNode | number>
-) => ({
-  type,
-  a: argFactory(a),
-  b: argFactory(b),
-  others: others.map(argFactory),
-});
-
-const opFactory = (type: string) => (
-  left: AnimatedNode | number,
-  right: AnimatedNode | number,
-) => ({
-  type,
-  left: argFactory(left),
-  right: argFactory(right),
-});
-
-const singleOpFactory = (type: string) => (v: AnimatedNode | number) => ({
-  type,
-  v: argFactory(v),
-});
-
-/* Helpers */
-
-const createMultiOp = (
-  type: string,
-  reducer: (p: number, c: number) => number,
-) => ({
-  factory: multipOpFactory(type),
-  convertFunc: convertMultiOp,
-  createEvalFunc: (node: Object) => createEvalMultiOpFunc(node, reducer),
-});
-
-const createSingleOp = (type: string, reducer: (v: number) => number) => ({
-  factory: singleOpFactory(type),
-  convertFunc: convertSingleOp,
-  createEvalFunc: (node: Object) => createEvalSingleOpFunc(node, reducer),
-});
-
-const createOp = (
-  type: string,
-  reducer: (left: number, right: number) => number,
-) => ({
-  factory: opFactory(type),
-  convertFunc: convertOp,
-  createEvalFunc: (node: Object) => createEvalOpFunc(node, reducer),
-});
-
-const createCond = () => ({
-  factory: (
-    expr: AnimatedNode | number,
-    ifNode: AnimatedNode | number,
-    elseNode: ?AnimatedNode | number,
-  ) => ({
-    type: 'cond',
-    expr: argFactory(expr),
-    ifNode: argFactory(ifNode),
-    elseNode: argFactory(elseNode ? elseNode : 0),
-  }),
-  convertFunc: (node: Object) => ({
-    type: node.type,
-    expr: convert(node.expr),
-    ifNode: convert(node.ifNode),
-    elseNode: convert(node.elseNode),
-  }),
-  createEvalFunc: createEvalCondition,
-});
-
-const createSet = () => ({
-  factory: (target: AnimatedValue, source: Object) => ({
-    type: 'set',
-    target: argFactory(target),
-    source: argFactory(source),
-  }),
-  convertFunc: (node: Object) => ({
-    type: node.type,
-    target: node.target.getTag(), // This is safe - target MUST be an animated value node
-    source: convert(node.source),
-  }),
-  createEvalFunc: createEvalSetValue,
-});
-
-const createBlock = () => ({
-  factory: (nodes: Array<AnimatedNode | number>) => ({
-    type: 'block',
-    nodes: nodes.map(argFactory),
-  }),
-  convertFunc: (node: Object) => ({
-    type: node.type,
-    nodes: node.nodes.map(convert),
-  }),
-  createEvalFunc: createEvalBlock,
-});
-
-const createValue = () => ({
-  factory: () => ({}),
-  convertFunc: convertValue,
-  createEvalFunc: (node: Object) => () => node.getValue(),
-});
-
-const createNumber = () => ({
-  factory: () => ({}),
-  convertFunc: convertNumber,
-  createEvalFunc: (node: Object) => () => node.value,
-});
-
-/* Expression map */
-const expressionMap = {
-  /* Multi ops */
-  add: createMultiOp('add', (p, c) => p + c),
-  sub: createMultiOp('sub', (p, c) => p - c),
-  multiply: createMultiOp('multiply', (p, c) => p * c),
-  divide: createMultiOp('divide', (p, c) => p / c),
-  pow: createMultiOp('pow', (p, c) => Math.pow(p, c)),
-  modulo: createMultiOp('mod', (p, c) => ((p % c) + c) % c),
-  /* Single ops */
-  sqrt: createSingleOp('sqrt', v => Math.sqrt(v)),
-  log: createSingleOp('log', v => Math.log(v)),
-  sin: createSingleOp('sin', v => Math.sin(v)),
-  cos: createSingleOp('cos', v => Math.cos(v)),
-  tan: createSingleOp('tan', v => Math.tan(v)),
-  acos: createSingleOp('acos', v => Math.acos(v)),
-  asin: createSingleOp('asin', v => Math.asin(v)),
-  atan: createSingleOp('atan', v => Math.atan(v)),
-  exp: createSingleOp('exp', v => Math.exp(v)),
-  round: createSingleOp('round', v => Math.round(v)),
-  /* Logical */
-  and: createMultiOp('and', (p, c) => p && c),
-  or: createMultiOp('or', (p, c) => p || c),
-  not: createSingleOp('not', v => !v),
-  /* Comparsion */
-  eq: createOp('eq', (left, right) => left === right),
-  neq: createOp('neq', (left, right) => left !== right),
-  lessThan: createOp('lessThan', (left, right) => left < right),
-  greaterThan: createOp('greaterThan', (left, right) => left > right),
-  lessOrEq: createOp('lessOrEq', (left, right) => left <= right),
-  greaterOrEq: createOp('greaterOrEq', (left, right) => left >= right),
-  /* Statements */
-  cond: createCond(),
-  set: createSet(),
-  block: createBlock(),
-  /* Values */
-  value: createValue(),
-  number: createNumber(),
-};
-
-AnimatedExpression.E = {};
-Object.keys(expressionMap).forEach(
-  k => (AnimatedExpression.E[k] = expressionMap[k].factory),
-);
 
 module.exports = AnimatedExpression;
