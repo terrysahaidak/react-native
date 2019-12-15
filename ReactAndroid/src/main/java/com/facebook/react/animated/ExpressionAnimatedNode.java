@@ -100,13 +100,38 @@ import java.util.List;
       }
       case "number": return () -> node.getDouble("value");
       /* Statements */
-      case "cond" : return createCond(node);
-      case "set": {
-
-      }
+      case "cond": return createCond(node);
+      case "set": return createSet(node);
+      case "block": return createBlock(node);
       default:
         return () -> 0;
     }
+  }
+
+  private EvalFunction createBlock(ReadableMap node) {
+    ReadableArray nodes = node.getArray("nodes");
+    List<EvalFunction> evalfunctions= new ArrayList<>(1);
+    for(int i=0; i<nodes.size(); i++) {
+      evalfunctions.add(createEvalFunc(nodes.getMap(i)));
+    }
+
+    return () -> {
+      double retVal = 0;
+      for(int i=0; i<evalfunctions.size(); i++) {
+        retVal = evalfunctions.get(i).eval();
+      }
+      return retVal;
+    };
+  }
+
+  private EvalFunction createSet(ReadableMap node) {
+    EvalFunction source = createEvalFunc(node.getMap("source"));
+    int targetId = node.getInt("target");
+    ValueAnimatedNode targetNode = (ValueAnimatedNode)mNativeAnimatedNodesManager.getNodeById(targetId);
+    return () -> {
+      targetNode.mValue = source.eval();
+      return targetNode.mValue;
+    };
   }
 
   private EvalFunction createCond(ReadableMap node) {

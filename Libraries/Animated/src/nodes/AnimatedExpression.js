@@ -72,6 +72,7 @@ function collectArguments(node: ?Object, args: AnimatedNode[]) {
     collectArguments(node.ifNode, args);
     collectArguments(node.elseNode, args);
     node.others && node.others.forEach(n => collectArguments(n, args));
+    node.nodes && node.nodes.forEach(n => collectArguments(n, args));
   }
 }
 
@@ -89,8 +90,19 @@ function createEvalFunc(node: AnimatedNode | number | Object): () => number {
   return expressionMap[node.type].createEvalFunc(node);
 }
 
-function createEvalSet(node: Object) {
-  const source = createEvalFunc(node.trueCond);
+function createEvalBlock(node: Object) {
+  const evalFuncs = node.nodes.map(createEvalFunc);
+  return () => {
+    let retVal = 0;
+    for (let i = 0; i < evalFuncs.length; i++) {
+      retVal = evalFuncs[i]();
+    }
+    return retVal;
+  };
+}
+
+function createEvalSetValue(node: Object) {
+  const source = createEvalFunc(node.source);
   return () => node.target.setValue(source());
 }
 
@@ -322,9 +334,22 @@ const expressionMap = {
     convertFunc: (node: Object) => ({
       type: node.type,
       target: node.target.__getNativeTag(),
-      source: expressionMap[node.type].convertFunc(node.source),
+      source: convert(node.source),
     }),
-    createEvalFunc: (node: Object) => createEvalSet(node),
+    createEvalFunc: (node: Object) => createEvalSetValue(node),
+  },
+  block: {
+    factory: (nodes: Array<AnimatedNode | number>) => ({
+      type: 'block',
+      nodes: nodes.map(valueFactory),
+    }),
+    convertFunc: (node: Object) => {
+      return {
+        type: node.type,
+        nodes: node.nodes.map(convert),
+      };
+    },
+    createEvalFunc: (node: Object) => createEvalBlock(node),
   },
 };
 

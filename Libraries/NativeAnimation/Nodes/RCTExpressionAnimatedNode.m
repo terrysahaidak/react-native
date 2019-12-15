@@ -156,7 +156,9 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
   else if([type isEqualToString:@"cond"]) {
     return [self evalBlockWithCondition: node];
   } else if([type isEqualToString:@"set"]) {
-    // TODO
+    return [self evalBlockWithSet:node];
+  } else if([type isEqualToString:@"block"]) {
+    return [self evalBlockWithBlock:node];
   }
   /* Conversion */
   else if([type isEqualToString:@"value"]) {
@@ -167,6 +169,20 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
   return ^{ return (CGFloat)0.0f; };
 }
 
+- (evalBlock) evalBlockWithBlock:(NSDictionary*)node {
+  NSArray* nodes = node[@"nodes"];
+  NSMutableArray<evalBlock>* evals = [[NSMutableArray alloc] init];
+  for(int i=0; i<[nodes count]; i++) {
+    [evals addObject:[self evalBlockWithNode:nodes[i]]];
+  }
+  return ^ {
+    CGFloat retVal = 0.0f;
+    for(int i=0; i<evals.count; i++) {
+      retVal = evals[i]();
+    }    
+    return retVal;
+  };
+}
 
 - (evalBlock) evalBlockWithAnimatedNode:(NSDictionary*)node {
   NSNumber* tag = node[@"tag"];
@@ -175,6 +191,17 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
     return animatedNode.value;
   };
 }
+
+- (evalBlock) evalBlockWithSet:(NSDictionary*)node {
+  evalBlock source = [self evalBlockWithNode:node[@"source"]];
+  NSNumber* targetTag = node[@"target"];
+  RCTValueAnimatedNode* targetNode = (RCTValueAnimatedNode*)self.manager.animationNodes[targetTag];
+  return ^ {
+    [targetNode setValue:source()];
+    return targetNode.value;
+  };
+}
+
 
 - (evalBlock) evalBlockWithCondition:(NSDictionary*)op {
   evalBlock evalExpr = [self evalBlockWithNode:op[@"expr"]];
