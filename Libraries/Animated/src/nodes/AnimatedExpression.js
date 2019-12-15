@@ -12,6 +12,7 @@
 
 const AnimatedInterpolation = require('./AnimatedInterpolation');
 const AnimatedNode = require('./AnimatedNode');
+const AnimatedValue = require('./AnimatedValue');
 const AnimatedWithChildren = require('./AnimatedWithChildren');
 
 import type {InterpolationConfigType} from './AnimatedInterpolation';
@@ -28,8 +29,6 @@ class AnimatedExpression extends AnimatedWithChildren {
   }
 
   __attach() {
-    // Collect all child nodes in expression and add self as child to
-    // receive updates
     collectArguments(this._graph, this._args);
     this._args.forEach(a => a.node.__addChild(this));
   }
@@ -71,6 +70,8 @@ function collectArguments(node: ?Object, args: AnimatedNode[]) {
     collectArguments(node.expr, args);
     collectArguments(node.ifNode, args);
     collectArguments(node.elseNode, args);
+    collectArguments(node.target, args);
+    collectArguments(node.source, args);
     node.others && node.others.forEach(n => collectArguments(n, args));
     node.nodes && node.nodes.forEach(n => collectArguments(n, args));
   }
@@ -81,7 +82,7 @@ function collectArguments(node: ?Object, args: AnimatedNode[]) {
 function createEvalFunc(node: AnimatedNode | number | Object): () => number {
   if (typeof node === 'number') {
     return () => node;
-  } else if (node.__getValue) {
+  } else if (node.hasOwnProperty('__attach')) {
     return () => node.__getValue();
   }
   if (!expressionMap[node.type]) {
@@ -103,20 +104,24 @@ function createEvalBlock(node: Object) {
 
 function createEvalSetValue(node: Object) {
   const source = createEvalFunc(node.source);
-  return () => node.target.setValue(source());
+  return () => {
+    const retVal = source();
+    node.target.setValue(retVal);
+    return retVal;
+  };
 }
 
 function createEvalCondition(node: Object) {
   const expr = createEvalFunc(node.expr);
-  const trueCond = createEvalFunc(node.ifNode);
-  const falseCond = createEvalFunc(node.elseNode);
+  const ifEval = createEvalFunc(node.ifNode);
+  const falseEval = node.elseNode ? createEvalFunc(node.elseNode) : () => 0;
 
   return () => {
     const cond = expr();
     if (cond) {
-      return trueCond();
+      return ifEval();
     } else {
-      return falseCond();
+      return falseEval();
     }
   };
 }
@@ -155,7 +160,11 @@ function createEvalOpFunc(
   };
 }
 
-/* Conversion to native */
+/*
+  Conversion to native:
+  this is basically a reduction of the current graph where animated
+  nodes are changed to animated node ids.
+*/
 
 const convert = (v: number | Object) => {
   if (typeof v === 'number') {
@@ -196,7 +205,7 @@ const convertValue = (node: Object) => {
 const convertNumber = (node: Object) => ({type: node.type, value: node.value});
 
 /* Factories */
-const valueFactory = (v: AnimatedNode | number) => {
+const argFactory = (v: AnimatedNode | number) => {
   if (v instanceof Object) {
     // Expression object
     if (v.hasOwnProperty('type')) {
@@ -208,6 +217,7 @@ const valueFactory = (v: AnimatedNode | number) => {
       node: v,
       getTag: v.__getNativeTag.bind(v),
       getValue: v.__getValue.bind(v),
+      setValue: (value: number) => (v._value = value),
     };
   } else {
     // Number
@@ -221,9 +231,9 @@ const multipOpFactory = (type: string) => (
   ...others: Array<AnimatedNode | number>
 ) => ({
   type,
-  a: valueFactory(a),
-  b: valueFactory(b),
-  others: others.map(valueFactory),
+  a: argFactory(a),
+  b: argFactory(b),
+  others: others.map(argFactory),
 });
 
 const opFactory = (type: string) => (
@@ -231,13 +241,13 @@ const opFactory = (type: string) => (
   right: AnimatedNode | number,
 ) => ({
   type,
-  left: valueFactory(left),
-  right: valueFactory(right),
+  left: argFactory(left),
+  right: argFactory(right),
 });
 
 const singleOpFactory = (type: string) => (v: AnimatedNode | number) => ({
   type,
-  v: valueFactory(v),
+  v: argFactory(v),
 });
 
 /* Helpers */
@@ -264,6 +274,64 @@ const createOp = (
   factory: opFactory(type),
   convertFunc: convertOp,
   createEvalFunc: (node: Object) => createEvalOpFunc(node, reducer),
+});
+
+const createCond = () => ({
+  factory: (
+    expr: AnimatedNode | number,
+    ifNode: AnimatedNode | number,
+    elseNode: ?AnimatedNode | number,
+  ) => ({
+    type: 'cond',
+    expr: argFactory(expr),
+    ifNode: argFactory(ifNode),
+    elseNode: argFactory(elseNode ? elseNode : 0),
+  }),
+  convertFunc: (node: Object) => ({
+    type: node.type,
+    expr: convert(node.expr),
+    ifNode: convert(node.ifNode),
+    elseNode: convert(node.elseNode),
+  }),
+  createEvalFunc: createEvalCondition,
+});
+
+const createSet = () => ({
+  factory: (target: AnimatedValue, source: Object) => ({
+    type: 'set',
+    target: argFactory(target),
+    source: argFactory(source),
+  }),
+  convertFunc: (node: Object) => ({
+    type: node.type,
+    target: node.target.getTag(), // This is safe - target MUST be an animated value node
+    source: convert(node.source),
+  }),
+  createEvalFunc: createEvalSetValue,
+});
+
+const createBlock = () => ({
+  factory: (nodes: Array<AnimatedNode | number>) => ({
+    type: 'block',
+    nodes: nodes.map(argFactory),
+  }),
+  convertFunc: (node: Object) => ({
+    type: node.type,
+    nodes: node.nodes.map(convert),
+  }),
+  createEvalFunc: createEvalBlock,
+});
+
+const createValue = () => ({
+  factory: () => ({}),
+  convertFunc: convertValue,
+  createEvalFunc: (node: Object) => () => node.getValue(),
+});
+
+const createNumber = () => ({
+  factory: () => ({}),
+  convertFunc: convertNumber,
+  createEvalFunc: (node: Object) => () => node.value,
 });
 
 /* Expression map */
@@ -297,60 +365,13 @@ const expressionMap = {
   greaterThan: createOp('greaterThan', (left, right) => left > right),
   lessOrEq: createOp('lessOrEq', (left, right) => left <= right),
   greaterOrEq: createOp('greaterOrEq', (left, right) => left >= right),
-  /* Variables */
-  value: {
-    factory: () => ({}),
-    convertFunc: convertValue,
-    createEvalFunc: (node: Object) => () => node.getValue(),
-  },
-  number: {
-    factory: () => ({}),
-    convertFunc: convertNumber,
-    createEvalFunc: (node: Object) => () => node.value,
-  },
   /* Statements */
-  cond: {
-    factory: (
-      expr: AnimatedNode | number,
-      ifNode: AnimatedNode | number,
-      elseNode: ?AnimatedNode | number,
-    ) => ({
-      type: 'cond',
-      expr: expr,
-      ifNode: ifNode,
-      elseNode: elseNode ? elseNode : {type: 'number', value: 0},
-    }),
-    convertFunc: (node: Object) => {
-      return {
-        type: node.type,
-        expr: convert(node.expr),
-        ifNode: convert(node.ifNode),
-        elseNode: convert(node.elseNode),
-      };
-    },
-    createEvalFunc: (node: Object) => createEvalCondition(node),
-  },
-  set: {
-    convertFunc: (node: Object) => ({
-      type: node.type,
-      target: node.target.__getNativeTag(),
-      source: convert(node.source),
-    }),
-    createEvalFunc: (node: Object) => createEvalSetValue(node),
-  },
-  block: {
-    factory: (nodes: Array<AnimatedNode | number>) => ({
-      type: 'block',
-      nodes: nodes.map(valueFactory),
-    }),
-    convertFunc: (node: Object) => {
-      return {
-        type: node.type,
-        nodes: node.nodes.map(convert),
-      };
-    },
-    createEvalFunc: (node: Object) => createEvalBlock(node),
-  },
+  cond: createCond(),
+  set: createSet(),
+  block: createBlock(),
+  /* Values */
+  value: createValue(),
+  number: createNumber(),
 };
 
 AnimatedExpression.E = {};

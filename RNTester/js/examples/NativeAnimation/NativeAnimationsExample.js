@@ -21,12 +21,16 @@ const {
   Slider,
 } = require('react-native');
 
+const {block, set, cond, greaterThan, multiply} = Animated.E;
+
 const AnimatedSlider = Animated.createAnimatedComponent(Slider);
 
 class Tester extends React.Component<$FlowFixMeProps, $FlowFixMeState> {
   state = {
     native: new Animated.Value(0),
     js: new Animated.Value(0),
+    nativedummy: new Animated.Value(0),
+    jsdummy: new Animated.Value(0),
   };
 
   current = 0;
@@ -60,12 +64,14 @@ class Tester extends React.Component<$FlowFixMeProps, $FlowFixMeState> {
             <Text>Native:</Text>
           </View>
           <View style={styles.row}>
-            {this.props.children(this.state.native)}
+            {this.props.children(this.state.native, this.state.nativedummy)}
           </View>
           <View>
             <Text>JavaScript:</Text>
           </View>
-          <View style={styles.row}>{this.props.children(this.state.js)}</View>
+          <View style={styles.row}>
+            {this.props.children(this.state.js, this.state.jsdummy)}
+          </View>
         </View>
       </TouchableWithoutFeedback>
     );
@@ -376,45 +382,51 @@ exports.examples = [
     render: function(): React.Node {
       return (
         <Tester type="timing" config={{duration: 1000}}>
-          {anim => (
-            <Animated.View
-              style={[
-                styles.block,
-                {
-                  transform: [
-                    {
-                      translateX: anim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 200],
-                      }),
-                    },
-                    {
-                      translateY: anim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: [0, 50, 0],
-                      }),
-                    },
-                    {
-                      rotate: anim.interpolate({
-                        inputRange: [0, 0.5, 1],
-                        outputRange: ['0deg', '90deg', '0deg'],
-                      }),
-                    },
-                  ],
-                  backgroundColor: Animated.expression(
-                    Animated.E.cond(
-                      Animated.E.greaterThan(Animated.E.multiply(anim, 10), 5),
-                      0,
-                      1,
-                    ),
-                  ).interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['#FF0000', '#00FF00'],
-                  }),
-                },
-              ]}
-            />
-          )}
+          {(anim, dummy) => {
+            return (
+              <Animated.View
+                style={[
+                  styles.block,
+                  {
+                    borderRadius: dummy,
+                    transform: [
+                      {
+                        translateX: anim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 200],
+                        }),
+                      },
+                      {
+                        translateY: anim.interpolate({
+                          inputRange: [0, 0.5, 1],
+                          outputRange: [0, 50, 0],
+                        }),
+                      },
+                      {
+                        rotate: anim.interpolate({
+                          inputRange: [0, 0.5, 1],
+                          outputRange: ['0deg', '90deg', '0deg'],
+                        }),
+                      },
+                    ],
+                    backgroundColor: Animated.expression(
+                      block([
+                        cond(
+                          greaterThan(anim, 0.5),
+                          set(dummy, 50),
+                          set(dummy, 0),
+                        ),
+                        cond(greaterThan(multiply(anim, 10), 2.5), 0, 1),
+                      ]),
+                    ).interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['#FF0000', '#00FF00'],
+                    }),
+                  },
+                ]}
+              />
+            );
+          }}
         </Tester>
       );
     },
