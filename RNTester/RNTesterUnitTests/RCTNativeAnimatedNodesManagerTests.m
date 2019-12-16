@@ -11,6 +11,7 @@
 
 #import <React/RCTNativeAnimatedNodesManager.h>
 #import <React/RCTValueAnimatedNode.h>
+#import <React/RCTExpressionAnimatedNode.h>
 #import <React/RCTUIManager.h>
 
 static const NSTimeInterval FRAME_LENGTH = 1.0 / 60.0;
@@ -1093,6 +1094,137 @@ static id RCTPropChecker(NSString *prop, NSNumber *value)
   XCTAssert(hasTurnedForward);
   XCTAssertGreaterThan(bounceBackInitialFrames, 3);
   XCTAssertEqual(lastTranslateX, 1.5);
+}
+
+- (void)testExpressionNode
+{
+  CGFloat ( ^eval ) (NSDictionary*);
+  RCTNativeAnimatedNodesManager* manager = _nodesManager;
+  eval = ^(NSDictionary* graph) {
+    [manager createAnimatedNode:@100 config:@{@"type": @"expression", @"graph": graph}];
+    RCTExpressionAnimatedNode* node = (RCTExpressionAnimatedNode*)manager.animationNodes[@100];
+    [node performUpdate];
+    return node.value;
+  };
+  
+  NSDictionary* ( ^n ) (CGFloat);
+  n = ^ (CGFloat value) {
+    return @{@"type":@"number", @"value": [NSNumber numberWithFloat:value]};
+  };
+  
+  // Should return numbers
+  XCTAssertEqual(eval(@{@"type": @"number", @"value": @10}), 10, @"Did not return number provided");
+  
+  // Should support nested expressions
+  XCTAssertEqual(eval(@{
+    @"type": @"add",
+    @"a": n(10),
+    @"b": @{
+        @"type": @"multiply",
+        @"a": n(10),
+        @"b": n(10),
+        @"others": @[n(20)]
+    }
+  }), 2010, @"Did not calculate a nested expression");
+  
+  // Should support blocks expressions
+  XCTAssertEqual(eval(@{
+    @"type":@"block", @"nodes": @[
+        @{
+            @"type": @"add",
+            @"a": n(10),
+            @"b": @{
+                @"type": @"multiply",
+                @"a": n(10),
+                @"b": n(10),
+                @"others": @[n(20)]
+            }
+        }
+    ]}), 2010, @"Did not handle expressions in a block");
+  
+  // Should support conditions
+  XCTAssertEqual(eval(@{
+    @"type":@"cond",
+    @"expr": @{
+        @"type": @"eq",
+        @"left": n(10),
+        @"right": n(10)
+    },
+    @"ifNode": n(10),
+    @"elseNode": n(0)
+    }), 10, @"Did not return true from condition");
+  
+  XCTAssertEqual(eval(@{
+  @"type":@"cond",
+  @"expr": @{
+      @"type": @"eq",
+      @"left": n(30),
+      @"right": n(10)
+  },
+  @"ifNode": n(10),
+  @"elseNode": n(0)
+  }), 0, @"Did not return false from condition");
+  
+  // Should support setting values
+  [_nodesManager createAnimatedNode:@101 config:@{@"type": @"value", @"value": @0, @"offset": @0}];
+  RCTValueAnimatedNode* node = (RCTValueAnimatedNode*)_nodesManager.animationNodes[@101];
+
+  XCTAssertEqual(eval(@{
+    @"type": @"set",
+    @"target": @101,
+    @"source": n(100)
+  }), 100, @"Did not return the value that was set");
+  
+  XCTAssertEqual(node.value, 100, @"Did not set the correct value");
+  
+  // Should do math
+  XCTAssertEqual(eval(@{@"type": @"add", @"a": n(10), @"b": n(10), @"others": @[n(10)]}), 30, @"Add did not work");
+  XCTAssertEqual(eval(@{@"type": @"sub", @"a": n(100), @"b": n(10), @"others": @[n(10)]}), 80, @"Sub did not work");
+  XCTAssertEqual(eval(@{@"type": @"multiply", @"a": n(10), @"b": n(10), @"others": @[n(10)]}), 1000, @"Multiply did not work");
+  XCTAssertEqual(eval(@{@"type": @"divide", @"a": n(1000), @"b": n(10), @"others": @[n(10)]}), 10, @"Divide did not work");
+  XCTAssertEqual(eval(@{@"type": @"pow", @"a": n(2), @"b": n(2), @"others": @[n(2)]}), 16, @"Power did not work");
+  XCTAssertEqual(eval(@{@"type": @"modulo", @"a": n(20), @"b": n(8), @"others": @[n(3)]}), 1, @"Modulo did not work");
+  
+  // Should do math functions
+  XCTAssertEqual(eval(@{@"type": @"sqrt", @"v": n(16)}), 4, @"sqrt did not work");
+  XCTAssertEqual(eval(@{@"type": @"log", @"v": n(10)}), log(10), @"log did not work");
+  XCTAssertEqual(eval(@{@"type": @"sin", @"v": n(10)}), sin(10), @"sin did not work");
+  XCTAssertEqual(eval(@{@"type": @"cos", @"v": n(10)}), cos(10), @"cos did not work");
+  XCTAssertEqual(eval(@{@"type": @"tan", @"v": n(10)}), tan(10), @"tan did not work");
+  XCTAssertEqual(eval(@{@"type": @"asin", @"v": n(1)}), asin(1), @"asin did not work");
+  XCTAssertEqual(eval(@{@"type": @"acos", @"v": n(1)}), acos(1), @"acos did not work");
+  XCTAssertEqual(eval(@{@"type": @"atan", @"v": n(10)}), atan(10), @"atan did not work");
+  XCTAssertEqual(eval(@{@"type": @"exp", @"v": n(10)}), exp(10), @"exp did not work");
+  XCTAssertEqual(eval(@{@"type": @"round", @"v": n(20.5)}), 21, @"round did not work");
+  
+  // Shold do operators
+  XCTAssertEqual(eval(@{@"type": @"and", @"a": n(1), @"b": n(1), @"others": @[n(1)]}), 1, @"and did not work");
+  XCTAssertEqual(eval(@{@"type": @"and", @"a": n(0), @"b": n(1), @"others": @[n(1)]}), 0, @"and did not work");
+  XCTAssertEqual(eval(@{@"type": @"or", @"a": n(0), @"b": n(1), @"others": @[n(1)]}), 1, @"or did not work");
+  XCTAssertEqual(eval(@{@"type": @"or", @"a": n(0), @"b": n(0), @"others": @[n(0)]}), 0, @"or did not work");
+  XCTAssertEqual(eval(@{@"type": @"not", @"v": n(1)}), 0, @"not did not work");
+  XCTAssertEqual(eval(@{@"type": @"not", @"v": n(0)}), 1, @"not did not work");
+  
+  // Should do comparsions
+  XCTAssertEqual(eval(@{@"type": @"eq", @"left": n(10), @"right": n(5)}), 0, @"eq did not work");
+  XCTAssertEqual(eval(@{@"type": @"eq", @"left": n(15), @"right": n(15)}), 1, @"eq did not work");
+  
+  XCTAssertEqual(eval(@{@"type": @"neq", @"left": n(10), @"right": n(5)}), 1, @"neq did not work");
+  XCTAssertEqual(eval(@{@"type": @"neq", @"left": n(15), @"right": n(15)}), 0, @"neq did not work");
+  
+  XCTAssertEqual(eval(@{@"type": @"lessThan", @"left": n(10), @"right": n(5)}), 0, @"lessThan did not work");
+  XCTAssertEqual(eval(@{@"type": @"lessThan", @"left": n(14), @"right": n(15)}), 1, @"lessThan did not work");
+  
+  XCTAssertEqual(eval(@{@"type": @"greaterThan", @"left": n(10), @"right": n(5)}), 1, @"greaterThan did not work");
+  XCTAssertEqual(eval(@{@"type": @"greaterThan", @"left": n(14), @"right": n(15)}), 0, @"greaterThan did not work");
+  
+  XCTAssertEqual(eval(@{@"type": @"lessOrEq", @"left": n(100), @"right": n(100)}), 1, @"lessOrEq did not work");
+  XCTAssertEqual(eval(@{@"type": @"lessOrEq", @"left": n(10), @"right": n(100)}), 1, @"lessOrEq did not work");
+  XCTAssertEqual(eval(@{@"type": @"lessOrEq", @"left": n(100), @"right": n(10)}), 0, @"lessOrEq did not work");
+  
+  XCTAssertEqual(eval(@{@"type": @"greaterOrEq", @"left": n(100), @"right": n(100)}), 1, @"greaterOrEq did not work");
+  XCTAssertEqual(eval(@{@"type": @"greaterOrEq", @"left": n(100), @"right": n(10)}), 1, @"greaterOrEq did not work");
+  XCTAssertEqual(eval(@{@"type": @"greaterOrEq", @"left": n(10), @"right": n(100)}), 0, @"greaterOrEq did not work");
 }
 
 @end
