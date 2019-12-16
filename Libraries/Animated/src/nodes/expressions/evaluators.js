@@ -27,15 +27,21 @@ const evaluators: {[key: ExpressionType]: Function} = {
   atan: (node: Object) => singleOperator(node, v => Math.atan(v)),
   exp: (node: Object) => singleOperator(node, v => Math.exp(v)),
   round: (node: Object) => singleOperator(node, v => Math.round(v)),
-  and: (node: Object) => multiOperator(node, (p, c) => p && c),
-  or: (node: Object) => multiOperator(node, (p, c) => p || c),
-  not: (node: Object) => singleOperator(node, v => !v),
-  eq: (node: Object) => operator(node, (left, right) => left === right),
-  neq: (node: Object) => operator(node, (left, right) => left !== right),
-  lessThan: (node: Object) => operator(node, (left, right) => left < right),
-  greaterThan: (node: Object) => operator(node, (left, right) => left > right),
-  lessOrEq: (node: Object) => operator(node, (left, right) => left <= right),
-  greaterOrEq: (node: Object) => operator(node, (left, right) => left >= right),
+  and: (node: Object) => multiOperator(node, (p, c) => (p && c ? 1 : 0)),
+  or: (node: Object) => multiOperator(node, (p, c) => (p || c ? 1 : 0)),
+  not: (node: Object) => singleOperator(node, v => (!v ? 1 : 0)),
+  eq: (node: Object) =>
+    operator(node, (left, right) => (left === right ? 1 : 0)),
+  neq: (node: Object) =>
+    operator(node, (left, right) => (left !== right ? 1 : 0)),
+  lessThan: (node: Object) =>
+    operator(node, (left, right) => (left < right ? 1 : 0)),
+  greaterThan: (node: Object) =>
+    operator(node, (left, right) => (left > right ? 1 : 0)),
+  lessOrEq: (node: Object) =>
+    operator(node, (left, right) => (left <= right ? 1 : 0)),
+  greaterOrEq: (node: Object) =>
+    operator(node, (left, right) => (left >= right ? 1 : 0)),
   value: (node: Object) => () => node.getValue(),
   number: (node: Object) => () => node.value,
   cond: condition,
