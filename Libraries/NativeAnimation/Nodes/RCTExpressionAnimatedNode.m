@@ -198,6 +198,8 @@ typedef CGFloat ( ^evalSingleOpReducer )(CGFloat v);
   RCTValueAnimatedNode* targetNode = (RCTValueAnimatedNode*)self.manager.animationNodes[targetTag];
   return ^ {
     [targetNode setValue:source()];
+    // To the update to happen in the next frame, we need to trigger it manually
+    [targetNode setNeedsUpdate];
     return targetNode.value;
   };
 }

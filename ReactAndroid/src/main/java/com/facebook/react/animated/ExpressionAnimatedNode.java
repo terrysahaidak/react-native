@@ -129,7 +129,8 @@ import java.util.List;
     int targetId = node.getInt("target");
     ValueAnimatedNode targetNode = (ValueAnimatedNode)mNativeAnimatedNodesManager.getNodeById(targetId);
     return () -> {
-      targetNode.mValue = source.eval();
+      // To the update to happen in the next frame, we need to trigger it manually
+      mNativeAnimatedNodesManager.setAnimatedNodeValue(targetNode.mTag, source.eval());
       return targetNode.mValue;
     };
   }
